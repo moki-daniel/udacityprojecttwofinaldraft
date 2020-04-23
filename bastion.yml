@@ -1,0 +1,140 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: " Create an Amazon EC2 instance which acts as the Bastion Host. This example creates an EC2 security group for the instance to give you SSH access."
+Parameters:
+ EnvironmentName:
+  Description: An environment name that should match the name used to create the network.
+  Type: String
+  Default: devMokiudagramclone
+
+ KeyName: 
+  Description: "Name of an existing EC2 KeyPair to enable SSH access to the instance"
+  Type: "AWS::EC2::KeyPair::KeyName"
+  Default: devMokiTestKP
+  ConstraintDescription: "must be the name of an existing EC2 KeyPair."
+
+ AMI:
+  Description: 'The Machine Image to be used. Please use an Ubuntu Machine Image Specific 
+  to your region. Default is set to an AMI in the us-west-2 region.'
+  Type: String
+  Default: ami-0b37e9efc396e4c38  
+  
+  
+ 
+ InstanceType: 
+  Description: "Bastion EC2 instance type"
+  Type: String
+  Default: "t2.medium"
+
+
+Resources: 
+ BastionInstance: 
+  Type: "AWS::EC2::Instance"
+  Properties: 
+   InstanceType: !Ref InstanceType
+   SecurityGroupIds: 
+    - !Ref InstanceSecurityGroup
+   KeyName: !Ref KeyName
+   ImageId: !Ref AMI
+
+   SubnetId: 
+    Fn::ImportValue: !Sub "${EnvironmentName}-devMokiudagramclonePUB1-SN"
+   
+   
+ InstanceSecurityGroup: 
+  Type: "AWS::EC2::SecurityGroup"
+  Properties: 
+   GroupDescription: "Enable SSH access via port 22"
+   VpcId: 
+        Fn::ImportValue: !Sub "${EnvironmentName}-devMokiudagramcloneVPCID"  
+   SecurityGroupIngress: 
+    - IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+      CidrIp:  "0.0.0.0/0"
+      
+Outputs: 
+  VPC: 
+    Description: A reference to the created VPC
+    Value: !Ref VPC
+    Export:
+      Name: !Sub ${EnvironmentName}-devMokiudagramcloneVPCID
+
+  VPCPublicRouteTable:
+    Description: Public Routing
+    Value: !Ref PublicRouteTable
+    Export:
+      Name: !Sub ${EnvironmentName}-devMokiudagramclonePUB-RT
+
+  VPCPrivateRouteTable1:
+    Description: Private Routing AZ1
+    Value: !Ref PrivateRouteTable1
+    Export:
+      Name: !Sub ${EnvironmentName}-devMokiudagramclonePRI1-RT
+
+  VPCPrivateRouteTable2:
+    Description: Private Routing AZ2
+    Value: !Ref PrivateRouteTable2
+    Export:
+      Name: !Sub ${EnvironmentName}-devMokiudagramclonePRI2-RT
+
+  PublicSubnets:
+    Description: A list of the public subnets
+    Value: !Join [ ",", [ !Ref PublicSubnet1, !Ref PublicSubnet2 ]]
+    Export:
+      Name: !Sub ${EnvironmentName}-devMokiudagramclonePUB-NETS
+
+  PrivateSubnets:
+    Description: A list of the private subnets
+    Value: !Join [ ",", [ !Ref PrivateSubnet1, !Ref PrivateSubnet2 ]]
+    Export:
+      Name: !Sub ${EnvironmentName}-devMokiudagramclonePRIV-NETS
+
+  PublicSubnet1:
+    Description: A reference to the public subnet in the 1st Availability Zone
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: !Sub ${EnvironmentName}-devMokiudagramclonePUB1-SN
+
+  PublicSubnet2: 
+    Description: A reference to the public subnet in the 2nd Availability Zone
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: !Sub ${EnvironmentName}-devMokiudagramclonePUB2-SN
+
+  PrivateSubnet1:
+    Description: A reference to the private subnet in the 1st Availability Zone
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: !Sub ${EnvironmentName}-devMokiudagramclonePRI1-SN
+
+  PrivateSubnet2: 
+    Description: A reference to the private subnet in the 2nd Availability Zone
+    Value: !Ref PrivateSubnet2
+    Export:
+     Name: !Sub ${EnvironmentName}-devMokiudagramclonePRI2-SN
+
+  InstanceId: 
+    Description: "InstanceId of the newly created EC2 instance"
+    Value: 
+    Ref: BastionInstance
+  
+  
+  PublicIP: 
+    Description: "Public IP address of the newly created EC2 instance"
+    Value: 
+    "Fn::GetAtt": 
+      - BastionInstance
+      - PublicIp
+
+  sgBastion:
+    Description: Bastion SecurityGroup Export
+    Value: 
+     !GetAtt
+        - InstanceSecurityGroup
+        - GroupId
+    Export:
+      Name: !Sub "${EnvironmentName}-BastionSecurityGroupID"  
+
+  
+  
+  
